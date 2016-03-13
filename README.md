@@ -7,6 +7,8 @@ See requirements.org (plain-text) for a description of the project.
 
 Make a shared state Websockets drawing program
 
+Components in sockets.py from https://github.com/abramhindle/WebSocketsExamples
+
 Prereqs
 =======
 
@@ -19,7 +21,7 @@ pip install gunicorn
 Contributors / Licensing
 ========================
 
-Generally everything is LICENSE'D under the Apache 2 license by Abram Hindle.
+Generally everything is LICENSE'D under the Apache 2 license by Abram Hindle and changes by Cody Ingram.
 
 freetests.py is LICENSE'D under a BSD-like license:
 
@@ -57,3 +59,4 @@ Contributors
 
 * Mark Galloway
 * Abram Hindle
+* Cody Ingram

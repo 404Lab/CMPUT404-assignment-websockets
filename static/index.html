@@ -52,11 +52,79 @@ function drawCircle(context,entity) {
         var x = entity["x"];
         var y = entity["y"];
         //moveTo(x,y);
-        fillStyle = entity["colour"];
+        // colour fun
+        fillStyle = colourChange();
         strokeStyle = fillStyle;
         arc(x, y, (entity["radius"])?entity["radius"]:50, 0, 2.0 * Math.PI, false);  
         stroke();                                
     }
+}
+
+var colourIndex = 0;
+
+function colourChange() {
+    var colour = "";
+    if (colourIndex == 0) {
+        colour = "#FFA500";
+        colourIndex = colourIndex + 1;
+    } else if(colourIndex == 1) {
+        colour = "#FF0000";
+        colourIndex = colourIndex + 1;
+    } else if(colourIndex == 2) {
+        colour = "#FFFF00";
+        colourIndex = colourIndex + 1;
+    }
+    else if(colourIndex == 3) {
+        colour = "#008000";
+        colourIndex = colourIndex + 1;
+    }
+    else if(colourIndex == 4) {
+        colour = "#0000FF";
+        colourIndex = colourIndex + 1;
+    }
+    else if(colourIndex == 5) {
+        colour = "#00FFFF";
+        colourIndex = colourIndex + 1;
+    }
+    else if(colourIndex == 6) {
+        colour = "#FF00FF";
+        colourIndex = 0;
+    }
+    return colour;
+
+}
+
+var radiusIndex = 0;
+
+function radiusChange() {
+    var radius = 5;
+    if (radiusIndex == 0) {
+        radius = radius + 25;
+        radiusIndex = radiusIndex + 1;
+    } else if(radiusIndex == 1) {
+        radius = radius + 25;
+        radiusIndex = radiusIndex + 1;
+    } else if(radiusIndex == 2) {
+        radius = radius + 25;
+        radiusIndex = radiusIndex + 1;
+    }
+    else if(radiusIndex == 3) {
+        radius = radius + 25;
+        radiusIndex = radiusIndex + 1;
+    }
+    else if(radiusIndex == 4) {
+        radius = radius + 25;
+        radiusIndex = radiusIndex + 1;
+    }
+    else if(radiusIndex == 5) {
+        radius = radius + 25;
+        radiusIndex = radiusIndex + 1;
+    }
+    else if(radiusIndex == 6) {
+        radius = radius + 25;
+        radiusIndex = 0;
+    }
+    return radius;
 }
 
 function prepEntity(entity) {
@@ -125,6 +193,9 @@ function addEntity(entity, data) {
     world[entity] = data;
     drawNextFrame(); // (but should we?)
     //XXX: Send a XHTML Request that updates the entity you just modified!
+    var jsn = {};
+    jsn[entity] = data;
+    socket.send(JSON.stringify(jsn));
 }
 var counter = 0;
 function addEntityWithoutName(data) {
@@ -231,16 +302,15 @@ mouse = (function() {
 // Add the application specific mouse listeners!
 //XXX: TODO Make these prettier!
 mouse.mousedowners.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'blue'});
+    addEntityWithoutName({'x':x,'y':y,'colour':'blue', 'radius':radiusChange()});
 });
 
 mouse.mouseuppers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'red'});
+    addEntityWithoutName({'x':x,'y':y,'colour':'red', 'radius':radiusChange()});
 });
 
 mouse.mousedraggers.push(function(x,y,clicked,e) {
-    addEntityWithoutName({'x':x,'y':y,'colour':'green',
-                          'radius':10});
+    addEntityWithoutName({'x':x,'y':y,'colour':'green', 'radius':radiusChange()});
 });
 
 
@@ -248,12 +318,12 @@ function update() {
     drawFrame();
 }
 
-
 function wsSetup() {
     var url = "ws://"+host+"/subscribe";   
     socket = new WebSocket(url);
     socket.onopen = function() {
         //XXX: TODO What are you going to do here?
+        // nothing?
     };
     socket.onerror = function(msg) {
         debug("WebSocket Error:" + msg.data);
@@ -261,7 +331,15 @@ function wsSetup() {
     socket.onmessage = function(msg) {  
         try {
             debug("WebSocket Recv:" + msg.data);
-            //XXX: TODO What are you going to do here?            
+            //XXX: TODO What are you going to do here?  
+            // process json, set the world variables
+            var message = JSON.parse(msg.data);
+            for (var k in message){
+                world[k] = message[k];
+                 
+            }
+            drawNextFrame();  
+                     
         } catch (e) {
             alert("socket on message: " + e);
         }

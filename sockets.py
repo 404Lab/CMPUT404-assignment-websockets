@@ -26,6 +26,18 @@ app = Flask(__name__)
 sockets = Sockets(app)
 app.debug = True
 
+clients = list()
+
+class Client:
+    def __init__(self):
+        self.queue = queue.Queue()
+
+    def put(self, v):
+        self.queue.put_nowait(v)
+
+    def get(self):
+        return self.queue.get()
+
 class World:
     def __init__(self):
         self.clear()
@@ -47,6 +59,7 @@ class World:
 
     def update_listeners(self, entity):
         '''update the set listeners'''
+        # use client queue to hold data
         for listener in self.listeners:
             listener(entity, self.get(entity))
 
@@ -63,26 +76,42 @@ myWorld = World()
 
 def set_listener( entity, data ):
     ''' do something with the update ! '''
+    jdata = json.dumps({entity:data})
+    for client in clients:
+        client.put(jdata)
 
 myWorld.add_set_listener( set_listener )
-        
+
 @app.route('/')
 def hello():
     '''Return something coherent here.. perhaps redirect to /static/index.html '''
-    return redirect("index.html")
+    return redirect("/static/index.html")
 
 def read_ws(ws,client):
     '''A greenlet function that reads from the websocket and updates the world'''
     # XXX: TODO IMPLEMENT ME
-    while True:
-        message = ws.recieve()
-        if message:
-            jdata = json.loads(message)
+    #
+    # read in socket, get json and send to client + set world
+    #
+    try:
+        while True:
+            message = ws.receive()
+            
+            if message is not None:
+                jdata = json.loads(message)
 
-            for k,v in jdata:
-                myWorld.set(k,v)
-        else:
-            break
+                for k in jdata:
+                    myWorld.set(k, jdata[k])
+
+                for client in clients:
+                    client.put(json.dumps(jdata))
+
+            else:
+                break
+    
+    except Exception as e:
+        print "Error: %s" %e
+
     return None
 
 @sockets.route('/subscribe')
@@ -90,8 +119,28 @@ def subscribe_socket(ws):
     '''Fufill the websocket URL of /subscribe, every update notify the
        websocket and read updates from the websocket '''
     # XXX: TODO IMPLEMENT ME
+    #
+    # get from client, send to socket
+    #
+    client = Client()
+    clients.append(client)
+    g = gevent.spawn( read_ws, ws, client )    
 
+    try:
+        while True:
+            # block here
+            jdata = client.get()
+            print "Got a message!"
+            ws.send(jdata)
+
+    except Exception as e:
+        print "WS Error %s" % e
+
+    finally:
+        clients.remove(client)
+        gevent.kill(g)
     return None
+
 
 
 def flask_post_json():
@@ -107,11 +156,11 @@ def flask_post_json():
 @app.route("/entity/<entity>", methods=['POST','PUT'])
 def update(entity):
     '''update the entities via this interface'''
-    j = flask_post_json()
+    jsn = flask_post_json()
 
-    for k, v in j.iteritems():
-        myWorld.update( entity, k, v )
-        
+    for k in jsn:
+        myWorld.update(entity, k, data[k])
+
     e = myWorld.get(entity)    
 
     return json.dumps( e )
